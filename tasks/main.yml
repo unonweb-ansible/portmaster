@@ -1,0 +1,136 @@
+---
+- name: portmaster role
+  tags:
+    - portmaster
+  block:
+
+  # check installed
+  - name: Check if portmaster is already installed
+    ansible.builtin.apt:
+      name: portmaster
+      state: present
+      update_cache: true
+    check_mode: true
+    ignore_errors: true
+    register: _is_installed
+
+  # apt install
+  - when: _is_installed is failed
+    block:
+
+    # cp .deb
+    - name: Copy {{ portmaster.apt.deb }} to /tmp/{{ portmaster.apt.deb }}
+      become: true
+      ansible.builtin.copy:
+        src: "{{ portmaster.apt.deb }}"
+        dest: "/tmp/{{ portmaster.apt.deb }}"
+        owner: root
+        group: root
+        mode: u=rw,g=,o=
+
+    # apt install
+    - when: portmaster.apt.state == "present"
+      name: Apt state {{ portmaster.apt.state }}
+      become: true
+      ansible.builtin.apt:
+        deb: "/tmp/{{ portmaster.apt.deb }}"
+        state: present
+
+    # clean-up
+    - name: Clean-up "/tmp/{{ portmaster.apt.deb }}"
+      become: true
+      ansible.builtin.file:
+        path: "/tmp/{{ portmaster.apt.deb }}"
+        state: absent
+
+  # apt remove
+  - when: portmaster.apt.state == "absent"
+    name: Apt state {{ portmaster.apt.state }}
+    become: true
+    ansible.builtin.apt:
+      name: portmaster
+      state: absent
+
+  # service file
+  - block:
+
+    # custom service file
+    - when: portmaster.service.src != None
+      name: Copy {{ portmaster.service.src }} to /etc/systemd/system/portmaster.service
+      become: true
+      notify: Systemd daemon-reload
+      ansible.builtin.copy:
+        src: "{{ portmaster.service.src }}"
+        dest: /etc/systemd/system/portmaster.service
+        owner: root
+        group: root
+        mode: u=rw,g=,o=
+
+    # enable/disable
+    - name: Enable/Disable portmaster.service
+      become: true
+      ansible.builtin.systemd_service:
+        name: portmaster.service
+        enabled: "{{ portmaster.service.enabled }}"
+
+    - when: portmaster.service.enabled == true
+      name: Start portmaster.service
+      become: true
+      ansible.builtin.systemd_service:
+        name: portmaster.service
+        state: started
+
+  # desktop integration
+  - block:
+
+    # cp portmaster-ui-start.sh
+    - name: Copy portmaster-ui-start.sh to /usr/lib/portmaster/portmaster-ui-start.sh
+      become: true
+      ansible.builtin.copy:
+        src: "portmaster-ui-start.sh"
+        dest: /usr/lib/portmaster/portmaster-ui-start.sh
+        owner: root
+        group: root
+        mode: u=rw,g=x,o=x
+
+    # link portmaster-ui-start.sh
+    - name: Link /usr/lib/portmaster/portmaster-ui-start.sh to /usr/bin/portmaster
+      become: true
+      ansible.builtin.file:
+        src: /usr/lib/portmaster/portmaster-ui-start.sh
+        dest: /usr/bin/portmaster
+        state: link
+
+    # cp portmaster.desktop
+    - name: Copy {{ portmaster.desktop.src }} to /usr/share/applications/portmaster.desktop
+      become: true
+      ansible.builtin.copy:
+        src: "{{ portmaster.desktop.src }}"
+        dest: /usr/share/applications/portmaster.desktop
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+    # cp logo
+    - name: Copy portmaster-logo.png to /usr/share/pixmaps/portmaster.png
+      become: true
+      ansible.builtin.copy:
+        src: portmaster-logo.png
+        dest: /usr/share/pixmaps/portmaster.png
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+  # autostart
+  - when: portmaster.autostart == true
+    block:
+
+    # cp portmaster.desktop
+    - name: Copy portmaster-autostart.desktop to /etc/xdg/autostart/portmaster-autostart.desktop
+      become: true
+      ansible.builtin.copy:
+        src: portmaster-autostart.desktop
+        dest: /etc/xdg/autostart/portmaster-autostart.desktop
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r

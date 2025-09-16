@@ -1,0 +1,12 @@
+---
+portmaster:
+    apt:
+      state: # present, absent, reinstall
+      deb: Portmaster_2.0.25_amd64.deb # Path to a .deb package on the remote machine.
+    service:
+      src: # installed by .deb
+      dst: /usr/lib/systemd/system/portmaster.service
+      enabled: true
+    desktop:
+      src: portmaster.desktop
+    autostart: true
