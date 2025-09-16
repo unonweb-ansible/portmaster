@@ -91,15 +91,15 @@
         dest: /usr/lib/portmaster/portmaster-ui-start.sh
         owner: root
         group: root
-        mode: u=rw,g=x,o=x
+        mode: u=rw,g=rx,o=rx
 
     # link portmaster-ui-start.sh
     - name: Link /usr/lib/portmaster/portmaster-ui-start.sh to /usr/bin/portmaster
       become: true
       ansible.builtin.file:
-        src: /usr/lib/portmaster/portmaster-ui-start.sh
-        dest: /usr/bin/portmaster
-        state: link
+        src: /usr/lib/portmaster/portmaster-ui-start.sh # Path of the file to link to
+        dest: /usr/bin/portmaster # Path to the file being managed
+        state: link # creates a symlink
 
     # cp portmaster.desktop
     - name: Copy {{ portmaster.desktop.src }} to /usr/share/applications/portmaster.desktop
